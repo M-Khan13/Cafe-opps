@@ -8,6 +8,7 @@ app.use(cors())
 app.use(express.json())
 app.use('/api/auth', require('./routes/auth'))
 const { requireAuth, requireAdmin } = require('./middleware/auth')
+app.use('/api/menu', require('./routes/menu'))
 
 app.get('/api/me', requireAuth, (req, res) => res.json({ user: req.user }))
 app.get('/api/admin-only', requireAuth, requireAdmin, (req, res) => res.json({ secret: 'admins see this' }))
