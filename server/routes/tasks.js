@@ -1,5 +1,5 @@
 const express = require('express')
-const { generateTasks } = require('../utils/ai')
+const { generateTasks, validateTasks } = require('../utils/ai')
 const Task = require('../models/Task')
 const { requireAuth, requireAdmin } = require('../middleware/auth')
 
@@ -64,15 +64,19 @@ router.patch('/:id', requireAuth, async (req, res) => {
   }
 })
 
-// POST /api/tasks/generate  — admin: goal -> LLM -> task list (NOT saved yet)
+// POST /api/tasks/generate  — admin: goal -> LLM -> validated task list (NOT saved)
 router.post('/generate', requireAuth, requireAdmin, async (req, res) => {
   try {
     const { goal } = req.body
     if (!goal) return res.status(400).json({ error: 'goal required' })
 
     const raw = await generateTasks(goal)
-    // for now just return what the model gave us — the guard comes next
-    res.json({ raw })
+    const result = validateTasks(raw)
+
+    if (!result.valid)
+      return res.status(422).json({ error: 'AI output failed validation', detail: result.error })
+
+    res.json({ tasks: result.tasks })   // clean, safe, ready for admin to review
   } catch (err) {
     res.status(500).json({ error: err.message })
   }
