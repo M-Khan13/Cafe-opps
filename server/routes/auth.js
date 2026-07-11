@@ -2,27 +2,9 @@ const express = require('express')
 const bcrypt = require('bcrypt')
 const User = require('../models/User')
 const { signToken } = require('../utils/token')
+const { requireAuth, requireAdmin } = require('../middleware/auth')
 
 const router = express.Router()
-
-// POST /api/auth/register  (bootstrap/testing — we'll lock this down later)
-router.post('/register', async (req, res) => {
-  try {
-    const { name, email, password, role, jobTitle, cafeId } = req.body
-    if (!name || !email || !password || !cafeId)
-      return res.status(400).json({ error: 'missing fields' })
-
-    const exists = await User.findOne({ email })
-    if (exists) return res.status(409).json({ error: 'email already used' })
-
-    const passwordHash = await bcrypt.hash(password, 10)
-    const user = await User.create({ name, email, passwordHash, role, jobTitle, cafeId })
-
-    res.status(201).json({ token: signToken(user), user: safeUser(user) })
-  } catch (err) {
-    res.status(500).json({ error: err.message })
-  }
-})
 
 // POST /api/auth/login
 router.post('/login', async (req, res) => {
@@ -35,6 +17,30 @@ router.post('/login', async (req, res) => {
     if (!ok) return res.status(401).json({ error: 'invalid credentials' })
 
     res.json({ token: signToken(user), user: safeUser(user) })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// POST /api/auth/staff  — admin creates a staff account
+router.post('/staff', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const { name, email, password, jobTitle } = req.body
+    if (!name || !email || !password)
+      return res.status(400).json({ error: 'missing fields' })
+
+    const exists = await User.findOne({ email })
+    if (exists) return res.status(409).json({ error: 'email already used' })
+
+    const passwordHash = await bcrypt.hash(password, 10)
+    const user = await User.create({
+      name, email, passwordHash,
+      role: 'staff',
+      jobTitle: jobTitle || '',
+      cafeId: req.user.cafeId
+    })
+
+    res.status(201).json({ user: safeUser(user) })
   } catch (err) {
     res.status(500).json({ error: err.message })
   }
