@@ -7,11 +7,11 @@ const STATUS_FLOW = {
   preparing: 'served',
 }
 
-const STATUS_COLORS = {
-  new: 'text-blue-400',
-  preparing: 'text-yellow-400',
-  served: 'text-green-400',
-}
+const COLUMNS = [
+  { key: 'new', label: 'New', color: 'text-status-new', dot: 'bg-status-new' },
+  { key: 'preparing', label: 'Preparing', color: 'text-status-preparing', dot: 'bg-status-preparing' },
+  { key: 'served', label: 'Served', color: 'text-status-served', dot: 'bg-status-served' },
+]
 
 function OrderFeed() {
   const [orders, setOrders] = useState([])
@@ -29,65 +29,100 @@ function OrderFeed() {
   }
 
   useEffect(() => {
-    fetchOrders() // initial load
-
-    // poll every 5 seconds for new orders
+    fetchOrders()
     const interval = setInterval(fetchOrders, 5000)
-
-    // cleanup: stop polling when component unmounts
     return () => clearInterval(interval)
   }, [])
 
   async function advanceStatus(order) {
     const next = STATUS_FLOW[order.status]
-    if (!next) return // already served, nothing to do
+    if (!next) return
     try {
       await api.patch(`/orders/${order._id}`, { status: next })
-      fetchOrders() // refresh to show new status
+      fetchOrders()
     } catch (err) {
       console.error('Failed to update status', err)
     }
   }
 
-  if (loading) return <p className="text-zinc-400">Loading orders...</p>
-  if (orders.length === 0)
-    return <p className="text-zinc-500">No orders yet.</p>
-
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      {orders.map((order) => (
-        <div key={order._id} className="rounded-lg border border-zinc-800 p-4">
-          <div className="flex justify-between items-center mb-2">
-            <span className="font-semibold">Table {order.tableNumber}</span>
-            <span className={`text-xs uppercase ${STATUS_COLORS[order.status]}`}>
-              {order.status}
-            </span>
-          </div>
+    <div>
+      <div className="flex items-center justify-between mb-1">
+        <h1 className="font-serif text-4xl font-semibold">Orders</h1>
+        <span className="flex items-center gap-2 text-sm text-muted">
+          <span className="h-2 w-2 rounded-full bg-status-served animate-pulse" />
+          Live
+        </span>
+      </div>
+      <p className="text-muted mb-8">Orders flow left to right as they're prepared.</p>
 
-          <div className="flex flex-col gap-1 text-sm text-zinc-300 mb-3">
-            {order.items.map((item, i) => (
-              <div key={i} className="flex justify-between">
-                <span>
-                  {item.name} × {item.qty}
-                </span>
-                <span>₹{item.price * item.qty}</span>
+      {loading ? (
+        <p className="text-muted">Loading orders...</p>
+      ) : (
+        <div className="grid gap-5 lg:grid-cols-3">
+          {COLUMNS.map((col) => {
+            const colOrders = orders.filter((o) => o.status === col.key)
+            return (
+              <div key={col.key}>
+                {/* Column header */}
+                <div className="flex items-center gap-2 mb-4">
+                  <span className={`h-2 w-2 rounded-full ${col.dot}`} />
+                  <span className={`text-sm font-medium uppercase tracking-wide ${col.color}`}>
+                    {col.label}
+                  </span>
+                  <span className="text-xs text-muted">({colOrders.length})</span>
+                </div>
+
+                {/* Orders in this column */}
+                <div className="flex flex-col gap-3">
+                  {colOrders.length === 0 ? (
+                    <p className="text-sm text-muted/60 border border-dashed border-border-warm rounded-xl p-4 text-center">
+                      Nothing here
+                    </p>
+                  ) : (
+                    colOrders.map((order) => (
+                      <div
+                        key={order._id}
+                        className="rounded-xl border border-border-warm bg-surface p-4"
+                      >
+                        <div className="flex justify-between items-baseline mb-3">
+                          <span className="font-serif text-lg font-semibold">
+                            Table {order.tableNumber}
+                          </span>
+                          {order.placedBy && (
+                            <span className="text-xs text-muted">by {order.placedBy.name}</span>
+                          )}
+                        </div>
+
+                        <div className="flex flex-col gap-1.5 text-sm mb-3">
+                          {order.items.map((item, i) => (
+                            <div key={i} className="flex justify-between">
+                              <span className="text-cream/90">
+                                {item.name} <span className="text-muted">× {item.qty}</span>
+                              </span>
+                              <span className="text-muted">₹{item.price * item.qty}</span>
+                            </div>
+                          ))}
+                        </div>
+
+                        {order.status !== 'served' && (
+                          <Button
+                            size="sm"
+                            className="w-full bg-amber text-espresso hover:bg-amber-dark"
+                            onClick={() => advanceStatus(order)}
+                          >
+                            Mark as {STATUS_FLOW[order.status]}
+                          </Button>
+                        )}
+                      </div>
+                    ))
+                  )}
+                </div>
               </div>
-            ))}
-          </div>
-
-          {order.placedBy && (
-            <p className="text-xs text-zinc-500 mb-3">
-              by {order.placedBy.name}
-            </p>
-          )}
-
-          {order.status !== 'served' && (
-            <Button size="sm" className="w-full" onClick={() => advanceStatus(order)}>
-              Mark as {STATUS_FLOW[order.status]}
-            </Button>
-          )}
+            )
+          })}
         </div>
-      ))}
+      )}
     </div>
   )
 }
