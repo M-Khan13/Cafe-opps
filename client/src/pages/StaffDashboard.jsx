@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react'
 import Layout from '@/components/Layout'
 import api from '@/lib/api'
+import TakeOrder from '@/components/TakeOrder'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 function StaffDashboard() {
   const [menu, setMenu] = useState([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
 
   useEffect(() => {
     async function fetchMenu() {
@@ -13,7 +14,7 @@ function StaffDashboard() {
         const res = await api.get('/menu')
         setMenu(res.data)
       } catch (err) {
-        setError('Could not load menu.')
+        console.error(err)
       } finally {
         setLoading(false)
       }
@@ -23,32 +24,42 @@ function StaffDashboard() {
 
   return (
     <Layout>
-      <h1 className="text-2xl font-bold mb-4">Menu</h1>
+      <Tabs defaultValue="order">
+        <TabsList className="mb-6">
+          <TabsTrigger value="order">Take Order</TabsTrigger>
+          <TabsTrigger value="menu">Menu</TabsTrigger>
+        </TabsList>
 
-      {loading && <p className="text-zinc-400">Loading menu...</p>}
-      {error && <p className="text-red-500">{error}</p>}
+        <TabsContent value="order">
+          <TakeOrder />
+        </TabsContent>
 
-      {!loading && !error && (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {menu.map((item) => (
-            <div
-              key={item._id}
-              className="rounded-lg border border-zinc-800 p-4 flex justify-between items-start"
-            >
-              <div>
-                <p className="font-medium">{item.name}</p>
-                <p className="text-sm text-zinc-400">{item.category}</p>
-              </div>
-              <div className="text-right">
-                <p className="font-semibold">₹{item.price}</p>
-                <p className={`text-xs ${item.available ? 'text-green-500' : 'text-red-500'}`}>
-                  {item.available ? 'Available' : 'Unavailable'}
-                </p>
-              </div>
+        <TabsContent value="menu">
+          {loading ? (
+            <p className="text-zinc-400">Loading menu...</p>
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {menu.map((item) => (
+                <div
+                  key={item._id}
+                  className="rounded-lg border border-zinc-800 p-4 flex justify-between items-start"
+                >
+                  <div>
+                    <p className="font-medium">{item.name}</p>
+                    <p className="text-sm text-zinc-400">{item.category}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-semibold">₹{item.price}</p>
+                    <p className={`text-xs ${item.available ? 'text-green-500' : 'text-red-500'}`}>
+                      {item.available ? 'Available' : 'Unavailable'}
+                    </p>
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-      )}
+          )}
+        </TabsContent>
+      </Tabs>
     </Layout>
   )
 }
