@@ -1,5 +1,11 @@
+import Layout from '@/components/Layout'
+
 function AdminDashboard() {
-  return <div className="p-8 text-2xl">Admin Dashboard</div>
+  return (
+    <Layout>
+      <h1 className="text-2xl font-bold">Admin Dashboard</h1>
+    </Layout>
+  )
 }
 
 export default AdminDashboard

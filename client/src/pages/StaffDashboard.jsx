@@ -1,5 +1,11 @@
+import Layout from '@/components/Layout'
+
 function StaffDashboard() {
-  return <div className="p-8 text-2xl">Staff Dashboard</div>
+  return (
+    <Layout>
+      <h1 className="text-2xl font-bold">Staff Dashboard</h1>
+    </Layout>
+  )
 }
 
 export default StaffDashboard
