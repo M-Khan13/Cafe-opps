@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react'
 import Layout from '@/components/Layout'
 import api from '@/lib/api'
+import OrderFeed from '@/components/OrderFeed'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   Select,
   SelectContent,
@@ -15,8 +17,6 @@ import {
 function AdminDashboard() {
   const [menu, setMenu] = useState([])
   const [loading, setLoading] = useState(true)
-
-  // form state
   const [name, setName] = useState('')
   const [price, setPrice] = useState('')
   const [category, setCategory] = useState('Coffee')
@@ -47,11 +47,9 @@ function AdminDashboard() {
         category,
         available: true,
       })
-      // reset form
       setName('')
       setPrice('')
       setCategory('Coffee')
-      // refresh list so the new item shows
       fetchMenu()
     } catch (err) {
       console.error('Failed to add item', err)
@@ -62,71 +60,80 @@ function AdminDashboard() {
 
   return (
     <Layout>
-      <h1 className="text-2xl font-bold mb-6">Menu Management</h1>
+      <Tabs defaultValue="orders">
+        <TabsList className="mb-6">
+          <TabsTrigger value="orders">Orders</TabsTrigger>
+          <TabsTrigger value="menu">Menu Management</TabsTrigger>
+        </TabsList>
 
-      {/* Add item form */}
-      <div className="rounded-lg border border-zinc-800 p-4 mb-6 max-w-2xl">
-        <p className="font-medium mb-3">Add a menu item</p>
-        <div className="flex flex-wrap gap-3 items-end">
-          <div className="flex flex-col gap-1">
-            <Label htmlFor="name">Name</Label>
-            <Input
-              id="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Cappuccino"
-            />
-          </div>
-          <div className="flex flex-col gap-1">
-            <Label htmlFor="price">Price (₹)</Label>
-            <Input
-              id="price"
-              type="number"
-              value={price}
-              onChange={(e) => setPrice(e.target.value)}
-              placeholder="180"
-              className="w-28"
-            />
-          </div>
-          <div className="flex flex-col gap-1">
-            <Label>Category</Label>
-            <Select value={category} onValueChange={setCategory}>
-              <SelectTrigger className="w-40">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Coffee">Coffee</SelectItem>
-                <SelectItem value="Tea">Tea</SelectItem>
-                <SelectItem value="Food">Food</SelectItem>
-                <SelectItem value="Dessert">Dessert</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <Button onClick={handleAdd} disabled={submitting}>
-            {submitting ? 'Adding...' : 'Add item'}
-          </Button>
-        </div>
-      </div>
+        <TabsContent value="orders">
+          <OrderFeed />
+        </TabsContent>
 
-      {/* Existing items list */}
-      {loading ? (
-        <p className="text-zinc-400">Loading menu...</p>
-      ) : (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {menu.map((item) => (
-            <div
-              key={item._id}
-              className="rounded-lg border border-zinc-800 p-4 flex justify-between items-start"
-            >
-              <div>
-                <p className="font-medium">{item.name}</p>
-                <p className="text-sm text-zinc-400">{item.category}</p>
+        <TabsContent value="menu">
+          <div className="rounded-lg border border-zinc-800 p-4 mb-6 max-w-2xl">
+            <p className="font-medium mb-3">Add a menu item</p>
+            <div className="flex flex-wrap gap-3 items-end">
+              <div className="flex flex-col gap-1">
+                <Label htmlFor="name">Name</Label>
+                <Input
+                  id="name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Cappuccino"
+                />
               </div>
-              <p className="font-semibold">₹{item.price}</p>
+              <div className="flex flex-col gap-1">
+                <Label htmlFor="price">Price (₹)</Label>
+                <Input
+                  id="price"
+                  type="number"
+                  value={price}
+                  onChange={(e) => setPrice(e.target.value)}
+                  placeholder="180"
+                  className="w-28"
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <Label>Category</Label>
+                <Select value={category} onValueChange={setCategory}>
+                  <SelectTrigger className="w-40">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Coffee">Coffee</SelectItem>
+                    <SelectItem value="Tea">Tea</SelectItem>
+                    <SelectItem value="Food">Food</SelectItem>
+                    <SelectItem value="Dessert">Dessert</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button onClick={handleAdd} disabled={submitting}>
+                {submitting ? 'Adding...' : 'Add item'}
+              </Button>
             </div>
-          ))}
-        </div>
-      )}
+          </div>
+
+          {loading ? (
+            <p className="text-zinc-400">Loading menu...</p>
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {menu.map((item) => (
+                <div
+                  key={item._id}
+                  className="rounded-lg border border-zinc-800 p-4 flex justify-between items-start"
+                >
+                  <div>
+                    <p className="font-medium">{item.name}</p>
+                    <p className="text-sm text-zinc-400">{item.category}</p>
+                  </div>
+                  <p className="font-semibold">₹{item.price}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
     </Layout>
   )
 }
