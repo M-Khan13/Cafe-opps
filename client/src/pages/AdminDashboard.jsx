@@ -5,6 +5,7 @@ import OrderFeed from '@/components/OrderFeed'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import TaskBoard from '@/components/TaskBoard'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   Select,
@@ -64,10 +65,14 @@ function AdminDashboard() {
         <TabsList className="mb-6">
           <TabsTrigger value="orders">Orders</TabsTrigger>
           <TabsTrigger value="menu">Menu Management</TabsTrigger>
+          <TabsTrigger value="tasks">Tasks</TabsTrigger>
         </TabsList>
 
         <TabsContent value="orders">
           <OrderFeed />
+        </TabsContent>
+        <TabsContent value="tasks">
+          <TaskBoard />
         </TabsContent>
 
         <TabsContent value="menu">
