@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import Layout from '@/components/Layout'
 import api from '@/lib/api'
 import TakeOrder from '@/components/TakeOrder'
+import MyTasks from '@/components/MyTasks'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 function StaffDashboard() {
@@ -27,11 +28,19 @@ function StaffDashboard() {
       <Tabs defaultValue="order">
         <TabsList className="mb-6">
           <TabsTrigger value="order">Take Order</TabsTrigger>
+          <TabsTrigger value="tasks">My Tasks</TabsTrigger>
           <TabsTrigger value="menu">Menu</TabsTrigger>
+          
+         
+        
         </TabsList>
 
         <TabsContent value="order">
           <TakeOrder />
+        </TabsContent>
+
+        <TabsContent value="tasks">
+          <MyTasks />
         </TabsContent>
 
         <TabsContent value="menu">
