@@ -38,7 +38,7 @@ function AdminDashboard() {
     fetchMenu()
   }, [])
 
-  async function handleAdd() {
+ async function handleAdd() {
     if (!name || !price) return
     setSubmitting(true)
     try {
@@ -56,6 +56,25 @@ function AdminDashboard() {
       console.error('Failed to add item', err)
     } finally {
       setSubmitting(false)
+    }
+  }
+
+  async function toggleAvailable(item) {
+    try {
+      await api.patch(`/menu/${item._id}`, { available: !item.available })
+      fetchMenu()
+    } catch (err) {
+      console.error('Failed to update item', err)
+    }
+  }
+
+  async function deleteItem(id) {
+    if (!confirm('Delete this item?')) return
+    try {
+      await api.delete(`/menu/${id}`)
+      fetchMenu()
+    } catch (err) {
+      console.error('Failed to delete item', err)
     }
   }
 
@@ -123,19 +142,44 @@ function AdminDashboard() {
             <p className="text-zinc-400">Loading menu...</p>
           ) : (
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {menu.map((item) => (
+{menu.map((item) => (
                 <div
                   key={item._id}
-                  className="rounded-lg border border-zinc-800 p-4 flex justify-between items-start"
+                  className="rounded-lg border border-zinc-800 p-4 flex flex-col gap-3"
                 >
-                  <div>
-                    <p className="font-medium">{item.name}</p>
-                    <p className="text-sm text-zinc-400">{item.category}</p>
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="font-medium">{item.name}</p>
+                      <p className="text-sm text-zinc-400">{item.category}</p>
+                    </div>
+                    <p className="font-semibold">₹{item.price}</p>
                   </div>
-                  <p className="font-semibold">₹{item.price}</p>
+                  <div className="flex items-center justify-between">
+                    <span
+                      className={`text-xs ${item.available ? 'text-green-500' : 'text-red-500'}`}
+                    >
+                      {item.available ? 'Available' : 'Unavailable'}
+                    </span>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => toggleAvailable(item)}
+                      >
+                        {item.available ? 'Mark out' : 'Mark in'}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-red-500"
+                        onClick={() => deleteItem(item._id)}
+                      >
+                        Delete
+                      </Button>
+                    </div>
+                  </div>
                 </div>
-              ))}
-            </div>
+              ))}            </div>
           )}
         </TabsContent>
       </Tabs>
