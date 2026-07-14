@@ -50,5 +50,15 @@ router.post('/staff', requireAuth, requireAdmin, async (req, res) => {
 function safeUser(user) {
   return { id: user._id, name: user.name, email: user.email, role: user.role, jobTitle: user.jobTitle, cafeId: user.cafeId }
 }
+// GET /api/auth/staff  — admin lists all staff in their cafe (for assignment dropdown)
+router.get('/staff', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const staff = await User.find({ role: 'staff', cafeId: req.user.cafeId })
+      .select('name jobTitle')      // only what the dropdown needs
+    res.json(staff)
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
 
 module.exports = router
