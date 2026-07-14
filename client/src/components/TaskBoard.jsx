@@ -14,10 +14,13 @@ import {
 
 function TaskBoard() {
   const [tasks, setTasks] = useState([])
+  const [staff, setStaff] = useState([])
   const [loading, setLoading] = useState(true)
+
   const [title, setTitle] = useState('')
-  const [role, setRole] = useState('staff')
+  const [assignedTo, setAssignedTo] = useState('')
   const [assigning, setAssigning] = useState(false)
+
   const [goal, setGoal] = useState('')
   const [generating, setGenerating] = useState(false)
   const [proposals, setProposals] = useState([])
@@ -33,17 +36,32 @@ function TaskBoard() {
     }
   }
 
+  async function fetchStaff() {
+    try {
+      const res = await api.get('/auth/staff')
+      setStaff(res.data)
+    } catch (err) {
+      console.error('Failed to load staff', err)
+    }
+  }
+
   useEffect(() => {
     fetchTasks()
+    fetchStaff()
   }, [])
 
+  function staffName(id) {
+    const s = staff.find((s) => s._id === id)
+    return s ? s.name : '—'
+  }
+
   async function handleAssign() {
-    if (!title) return
+    if (!title || !assignedTo) return
     setAssigning(true)
     try {
-      await api.post('/tasks', { title, suggestedRole: role })
+      await api.post('/tasks', { title, assignedTo })
       setTitle('')
-      setRole('staff')
+      setAssignedTo('')
       fetchTasks()
     } catch (err) {
       console.error('Failed to assign task', err)
@@ -58,7 +76,7 @@ function TaskBoard() {
     setProposals([])
     try {
       const res = await api.post('/tasks/generate', { goal })
-      setProposals(res.data.tasks.map((t) => ({ ...t, approved: true })))
+      setProposals(res.data.tasks.map((t) => ({ ...t, assignedTo: '' })))
     } catch (err) {
       console.error('Failed to generate tasks', err)
     } finally {
@@ -66,17 +84,21 @@ function TaskBoard() {
     }
   }
 
-  function toggleProposal(index) {
+  function setProposalStaff(index, staffId) {
     setProposals((prev) =>
-      prev.map((p, i) => (i === index ? { ...p, approved: !p.approved } : p))
+      prev.map((p, i) => (i === index ? { ...p, assignedTo: staffId } : p))
     )
   }
 
   async function handleApprove() {
-    const approved = proposals.filter((p) => p.approved)
+    const ready = proposals.filter((p) => p.assignedTo)
     try {
-      for (const p of approved) {
-        await api.post('/tasks', { title: p.title, suggestedRole: p.suggestedRole })
+      for (const p of ready) {
+        await api.post('/tasks', {
+          title: p.title,
+          assignedTo: p.assignedTo,
+          suggestedRole: p.suggestedRole,
+        })
       }
       setProposals([])
       setGoal('')
@@ -85,6 +107,8 @@ function TaskBoard() {
       console.error('Failed to save tasks', err)
     }
   }
+
+  const readyCount = proposals.filter((p) => p.assignedTo).length
 
   return (
     <div>
@@ -108,28 +132,39 @@ function TaskBoard() {
                 />
               </div>
               <div className="flex flex-col gap-1.5">
-                <Label>For role</Label>
-                <Select value={role} onValueChange={setRole}>
-                  <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+                <Label>Assign to</Label>
+                <Select value={assignedTo} onValueChange={setAssignedTo}>
+                  <SelectTrigger className="w-56">
+                    <SelectValue placeholder="Select staff member">
+                      {assignedTo ? staffName(assignedTo) : 'Select staff member'}
+                    </SelectValue>
+                  </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="staff">Staff</SelectItem>
-                    <SelectItem value="admin">Admin</SelectItem>
+                    {staff.map((s) => (
+                      <SelectItem key={s._id} value={s._id}>
+                        {s.name}{s.jobTitle ? ` · ${s.jobTitle}` : ''}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
-              <Button onClick={handleAssign} disabled={assigning} className="w-fit bg-amber text-espresso hover:bg-amber-dark">
+              <Button
+                onClick={handleAssign}
+                disabled={assigning || !title || !assignedTo}
+                className="w-fit bg-amber text-espresso hover:bg-amber-dark"
+              >
                 {assigning ? 'Assigning...' : 'Assign task'}
               </Button>
             </div>
           </div>
 
-          {/* AI — special treatment */}
+          {/* AI */}
           <div className="rounded-xl border border-amber/40 bg-surface p-5 shadow-[0_0_30px_-12px_rgba(224,167,62,0.4)]">
             <div className="flex items-center gap-2 mb-1">
               <Sparkles className="h-4 w-4 text-amber" />
               <p className="font-medium">Generate tasks with AI</p>
             </div>
-            <p className="text-xs text-muted mb-4">Describe a goal and let AI propose a task list to review.</p>
+            <p className="text-xs text-muted mb-4">Describe a goal, then assign each proposed task to someone.</p>
             <div className="flex flex-col gap-3">
               <Input value={goal} onChange={(e) => setGoal(e.target.value)} placeholder="Prep for Saturday morning rush" />
               <Button onClick={handleGenerate} disabled={generating} variant="outline" className="w-fit border-amber/50 text-amber hover:bg-amber/10">
@@ -139,16 +174,30 @@ function TaskBoard() {
 
             {proposals.length > 0 && (
               <div className="mt-5 flex flex-col gap-2">
-                <p className="text-sm text-muted">Review proposals:</p>
+                <p className="text-sm text-muted">Assign each task, then save:</p>
                 {proposals.map((p, i) => (
-                  <label key={i} className="flex items-center gap-3 rounded-lg border border-border-warm p-3 cursor-pointer hover:border-muted transition">
-                    <input type="checkbox" checked={p.approved} onChange={() => toggleProposal(i)} className="accent-amber" />
+                  <div key={i} className="flex items-center gap-3 rounded-lg border border-border-warm p-3">
                     <span className="flex-1 text-sm">{p.title}</span>
-                    <span className="text-xs text-muted uppercase">{p.suggestedRole}</span>
-                  </label>
+                    <Select value={p.assignedTo} onValueChange={(v) => setProposalStaff(i, v)}>
+                      <SelectTrigger className="w-44">
+                        <SelectValue placeholder="Assign to…">
+                          {p.assignedTo ? staffName(p.assignedTo) : 'Assign to…'}
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {staff.map((s) => (
+                          <SelectItem key={s._id} value={s._id}>{s.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 ))}
-                <Button onClick={handleApprove} className="w-fit mt-2 bg-amber text-espresso hover:bg-amber-dark">
-                  Approve & save ({proposals.filter((p) => p.approved).length})
+                <Button
+                  onClick={handleApprove}
+                  disabled={readyCount === 0}
+                  className="w-fit mt-2 bg-amber text-espresso hover:bg-amber-dark"
+                >
+                  Approve &amp; save ({readyCount})
                 </Button>
               </div>
             )}
@@ -170,7 +219,7 @@ function TaskBoard() {
                     {task.title}
                   </span>
                   <div className="flex items-center gap-3 text-xs text-muted">
-                    {task.suggestedRole && <span className="uppercase">{task.suggestedRole}</span>}
+                    <span>{staffName(task.assignedTo)}</span>
                     <span className="uppercase">{task.status}</span>
                   </div>
                 </div>
