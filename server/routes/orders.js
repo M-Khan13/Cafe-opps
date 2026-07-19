@@ -17,6 +17,9 @@ router.post('/', requireAuth, async (req, res) => {
       placedBy: req.user.id,
       cafeId: req.user.cafeId
     })
+    const populated = await order.populate('placedBy', 'name')
+    req.app.get('io').emit('order:new', populated)
+
     res.status(201).json(order)
   } catch (err) {
     res.status(500).json({ error: err.message })
@@ -52,6 +55,8 @@ router.patch('/:id', requireAuth, requireAdmin, async (req, res) => {
 
     order.status = status
     await order.save()
+    const populated = await order.populate('placedBy', 'name')
+    req.app.get('io').emit('order:update', populated)
     res.json(order)
   } catch (err) {
     res.status(500).json({ error: err.message })

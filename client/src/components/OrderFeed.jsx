@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import api from '@/lib/api'
+import socket from '@/lib/socket'
 import { Button } from '@/components/ui/button'
 
 const STATUS_FLOW = {
@@ -29,9 +30,29 @@ function OrderFeed() {
   }
 
   useEffect(() => {
+    // initial load (still need the current list on mount)
     fetchOrders()
-    const interval = setInterval(fetchOrders, 5000)
-    return () => clearInterval(interval)
+
+    // real-time: a brand-new order arrives → add it to the top
+    function handleNew(order) {
+      setOrders((prev) => [order, ...prev])
+    }
+
+    // real-time: an existing order's status changed → replace it
+    function handleUpdate(updated) {
+      setOrders((prev) =>
+        prev.map((o) => (o._id === updated._id ? updated : o))
+      )
+    }
+
+    socket.on('order:new', handleNew)
+    socket.on('order:update', handleUpdate)
+
+    // cleanup: remove listeners when component unmounts
+    return () => {
+      socket.off('order:new', handleNew)
+      socket.off('order:update', handleUpdate)
+    }
   }, [])
 
   async function advanceStatus(order) {
@@ -39,7 +60,8 @@ function OrderFeed() {
     if (!next) return
     try {
       await api.patch(`/orders/${order._id}`, { status: next })
-      fetchOrders()
+      // no manual refresh needed — the server emits 'order:update'
+      // and our listener updates state automatically
     } catch (err) {
       console.error('Failed to update status', err)
     }
@@ -64,7 +86,6 @@ function OrderFeed() {
             const colOrders = orders.filter((o) => o.status === col.key)
             return (
               <div key={col.key}>
-                {/* Column header */}
                 <div className="flex items-center gap-2 mb-4">
                   <span className={`h-2 w-2 rounded-full ${col.dot}`} />
                   <span className={`text-sm font-medium uppercase tracking-wide ${col.color}`}>
@@ -73,7 +94,6 @@ function OrderFeed() {
                   <span className="text-xs text-muted">({colOrders.length})</span>
                 </div>
 
-                {/* Orders in this column */}
                 <div className="flex flex-col gap-3">
                   {colOrders.length === 0 ? (
                     <p className="text-sm text-muted/60 border border-dashed border-border-warm rounded-xl p-4 text-center">
@@ -81,10 +101,7 @@ function OrderFeed() {
                     </p>
                   ) : (
                     colOrders.map((order) => (
-                      <div
-                        key={order._id}
-                        className="rounded-xl border border-border-warm bg-surface p-4"
-                      >
+                      <div key={order._id} className="rounded-xl border border-border-warm bg-surface p-4">
                         <div className="flex justify-between items-baseline mb-3">
                           <span className="font-serif text-lg font-semibold">
                             Table {order.tableNumber}
